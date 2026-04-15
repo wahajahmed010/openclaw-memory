@@ -1,32 +1,237 @@
-# OpenClaw Memory System
+# OpenClaw Memory System 🧠
 
-Persistent, searchable memory layer for OpenClaw.
+> *"Your AI shouldn't forget what you told it yesterday. We fixed that."*
 
-## Architecture
+---
 
-- **Storage**: Date-bucketed JSONL files (`memory/YYYY-MM-DD.jsonl`)
-- **Index**: SQLite with FTS5 full-text search (`.index/graph.db`)
-- **Search**: Hybrid keyword + semantic similarity with lazy embeddings
-- **Continuity**: Compaction-safe writes, snapshot + replay recovery
+## The Problem
 
-## Install
+OpenClaw (and most AI assistants) have a fatal flaw: **they live in the moment.**
+
+Every session starts fresh. Compaction wipes context. You repeat yourself endlessly.
+
+```
+You: "Build me a landing page for my SaaS"
+AI: "Sure! What's your product name? What colors? What's the target audience?..."
+# 15 minutes of re-explaining things you've already said 100 times.
+
+You: "Remember I prefer dark themes?"
+AI: "I don't have access to previous conversations..."
+```
+
+OpenClaw's built-in `memory_search` helps, but it's limited:
+- Only searches existing markdown files (MEMORY.md, daily notes)
+- No structured indexing — grep-like substring matching
+- No semantic search — "that restaurant you hated" won't match "the Italian place was terrible"
+- No proactive recall — it won't surface memories unless explicitly asked
+- Compaction wipes session context entirely
+
+---
+
+## The Council of Models
+
+This system wasn't designed by committee. It was **debated by three distinct AI minds**.
+
+We ran a three-round council with different LLMs representing different philosophies:
+
+### 🏛️ Round 1: Independent Proposals
+
+**Mnemosyne** (kimi-k2.5:cloud) — *The Architect*
+> "Three-layer architecture: JSON storage, SQLite index, in-memory graph. Structured, resilient, scalable."
+
+**Sibyl** (minimax-m2.7:cloud) — *The Interface Designer*
+> "Flat Markdown files, natural language, no commands. Human-hackable, conversational, simple."
+
+**Fabricator** (gemma4:31b-cloud) — *The Builder*
+> "JSONL append-only, lazy vectors, upgrade path. Pragmatic, works today, scales tomorrow."
+
+### ⚔️ Round 2: Critique & Defense
+
+Each model attacked the others ruthlessly:
+
+- Mnemosyne called Sibyl's approach "O(n) grep that fails at 500 memories"
+- Sibyl called Mnemosyne's graph "bureaucratic complexity for questions `rg` could answer"
+- Fabricator called both "over-engineered" and "under-built" respectively
+
+### 🤝 Round 3: Consensus
+
+The final architecture emerged from concessions and synthesis:
+
+✅ **Sibyl conceded:** SQLite index isn't over-engineered, it's pragmatic  
+✅ **Mnemosyne conceded:** Eventually-consistent indexing (not synchronous writes)  
+✅ **Fabricator conceded:** Manual refs are broken UX, auto-linking wins
+
+**The result:** A system that respects human simplicity (Sibyl) while providing fast structured search (Mnemosyne) and a pragmatic upgrade path (Fabricator).
+
+---
+
+## How It's Better
+
+### vs OpenClaw Default Memory
+
+| Feature | OpenClaw Default | OpenClaw Memory System |
+|---------|------------------|------------------------|
+| **Storage** | Markdown files only | JSONL + SQLite index |
+| **Search** | Substring grep | Hybrid: FTS5 keywords + semantic vectors |
+| **Speed** | O(n) file scan | O(1) index lookup + O(k) candidate scan |
+| **Semantic recall** | ❌ No | ✅ "restaurant you hated" → finds "Italian place was terrible" |
+| **Proactive recall** | ❌ No | ✅ Contextual anchors, temporal patterns |
+| **Compaction survival** | ❌ Session wiped | ✅ Rebuilds context from index + COMPACTION.md |
+| **Linking** | ❌ Manual | ✅ Auto-link via semantic similarity |
+| **Human editable** | ✅ Yes | ✅ Yes (Markdown in JSON text field) |
+
+### The Key Insight
+
+OpenClaw's memory is **write-only archaeology**: you write files, hope you remember where, grep to find them.
+
+This system is **living memory**: write immediately, index asynchronously, search intelligently, surface proactively.
+
+---
+
+## Philosophy
+
+### Design Principles (from the Council)
+
+1. **Privacy First** — 100% local, no cloud, no external services
+2. **Human-Hackable** — All files are plain text (JSON/Markdown), editable in any tool
+3. **Eventual Consistency** — Write-through capture, async indexing (no write delays)
+4. **Lazy Computation** — Don't pay for embeddings until you search
+5. **Rebuildable** — Index is derived; corrupt it? Rebuild from source in seconds
+
+### The Compaction Problem (Solved)
+
+OpenClaw compacts sessions to stay within context limits. The default system loses everything.
+
+**Our solution:**
+1. Every write hits disk immediately (write-through)
+2. Before compaction, snapshot critical context to `COMPACTION.md`
+3. After compaction, Buck reads `COMPACTION.md` + rebuilds from index
+4. Session resumes seamlessly — "You were working on X, got as far as Y. Continue?"
+
+---
+
+## Quick Start
+
+### Install
 
 ```bash
+# From GitHub
+pip install git+https://github.com/wahajahmed010/openclaw-memory.git
+
+# Or clone and develop
+git clone https://github.com/wahajahmed010/openclaw-memory.git
+cd openclaw-memory
 pip install -e .
 ```
 
-## CLI
+### Use
 
 ```bash
-openclaw-memory --base-dir ~/.openclaw/workspace write "Remember to call mom" --tags personal
-openclaw-memory --base-dir ~/.openclaw/workspace search "mom" --mode hybrid
-openclaw-memory --base-dir ~/.openclaw/workspace index
+# Write a memory
+openclaw-memory write "Wahaj prefers detailed responses" --tags preference,communication
+
+# Search memories
+openclaw-memory search "communication style" --mode hybrid
+
+# Rebuild index (if needed)
+openclaw-memory index
+
+# Export for backup
+openclaw-memory export --output backup.jsonl
 ```
 
-## Modules
+### In Python
 
-- `core.py` — JSONL storage, append-only writes
-- `index.py` — SQLite index with FTS5
-- `search.py` — Hybrid search + lazy embeddings
-- `continuity.py` — Compaction survival, atomic writes, export/import
-- `cli.py` — Command-line interface
+```python
+from openclaw_memory import MemoryStore
+
+store = MemoryStore(base_dir="~/.openclaw/workspace")
+
+# Write
+store.write(
+    text="Remember to review the Frankfurt job application",
+    tags=["job", "reminder"],
+    type="todo"
+)
+
+# Search
+results = store.search("Frankfurt job", mode="hybrid")
+for r in results:
+    print(f"{r.score:.2f}: {r.text}")
+```
+
+---
+
+## Architecture
+
+```
+memory/
+├── 2026-04-15.jsonl         # Date-bucketed append-only log
+├── 2026-04-16.jsonl
+└── .index/
+    ├── graph.db              # SQLite: entries, links, tags
+    ├── search.db             # FTS5 full-text index
+    └── vectors/              # Lazy embeddings (computed on demand)
+```
+
+**Storage:** JSONL append-only (Fabricator's pragmatism)  
+**Index:** SQLite + FTS5 (Mnemosyne's structure)  
+**Search:** Hybrid keyword + semantic (council consensus)  
+**Interface:** Natural language, human-editable files (Sibyl's UX)  
+
+---
+
+## Safety First
+
+This is your memory. We take that seriously.
+
+### Rollback Strategy
+
+```bash
+# 1. Backup before migration
+./scripts/backup-legacy.sh
+
+# 2. Preview changes
+./scripts/migrate.py --dry-run
+
+# 3. Execute
+./scripts/migrate.py --force
+
+# 4. Verify
+./scripts/verify.py --all
+
+# 5. If broken, rollback
+./scripts/rollback.py --force
+```
+
+### Dual-Mode Operation
+
+Run old and new systems in parallel:
+```bash
+./scripts/dual-mode.py --enable
+# Queries run on both, results compared
+./scripts/dual-mode.py --status
+```
+
+---
+
+## The Council Credits
+
+This system was designed through adversarial collaboration:
+
+| Council Member | Model | Role | Contribution |
+|---------------|-------|------|--------------|
+| **Mnemosyne** | kimi-k2.5:cloud | Architect | Three-layer structure, type taxonomy, explicit linking |
+| **Sibyl** | minimax-m2.7:cloud | Interface Designer | Human-hackable storage, natural language, proactive recall |
+| **Fabricator** | gemma4:31b-cloud | Builder | JSONL pragmatism, lazy vectors, working code |
+
+**The debate:** [COUNCIL.md](./COUNCIL.md)  
+**Technical spec:** [ARCHITECTURE.md](./ARCHITECTURE.md)
+
+---
+
+## License
+
+MIT — See [LICENSE](./LICENSE)
+
+Built with 🦌 by Buck and the Council.
