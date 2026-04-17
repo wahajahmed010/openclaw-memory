@@ -265,6 +265,19 @@ See full details: [HERMES_ADAPTATION.md](./HERMES_ADAPTATION.md)
 
 ---
 
+## 📚 Methodology Documentation
+
+The process of designing this system is documented separately:
+**[council-methodology](https://github.com/wahajahmed010/council-methodology)**
+
+Includes:
+- Full council transcripts (Mnemosyne, Sibyl, Fabricator)
+- Decision trail and trade-off analysis
+- Lessons learned and playbook for future adaptations
+- Reusable templates for running your own council
+
+---
+
 ## License
 
 MIT — See [LICENSE](./LICENSE)
