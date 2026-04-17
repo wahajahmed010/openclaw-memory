@@ -1,0 +1,2 @@
+[console_scripts]
+openclaw-memory = openclaw_memory.cli:main

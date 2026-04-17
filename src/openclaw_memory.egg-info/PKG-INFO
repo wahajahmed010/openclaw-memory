@@ -1,3 +1,15 @@
+Metadata-Version: 2.4
+Name: openclaw-memory
+Version: 0.1.0
+Summary: OpenClaw persistent memory layer — date-bucketed JSONL + SQLite FTS5 + hybrid search
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-cov; extra == "dev"
+Dynamic: license-file
+
 # OpenClaw Memory System 🧠
 
 > *"Your AI shouldn't forget what you told it yesterday. We fixed that."*
@@ -226,42 +238,7 @@ This system was designed through adversarial collaboration:
 | **Fabricator** | gemma4:31b-cloud | Builder | JSONL pragmatism, lazy vectors, working code |
 
 **The debate:** [COUNCIL.md](./COUNCIL.md)  
-**Technical spec:** [ARCHITECTURE.md](./ARCHITECTURE.md)  
-**Hermes adaptation:** [HERMES_ADAPTATION.md](./HERMES_ADAPTATION.md)
-
----
-
-## Hermes Adaptation — Auto-Skill Pipeline
-
-Inspired by [Hermes Agent](https://github.com/NousResearch/Hermes-Agent) by Nous Research, we're adapting their self-improving skill system for Buck.
-
-### The Problem Auto-Skill Solves
-
-Subagents complete useful work every day — but that knowledge dies with the session. If a subagent figures out the perfect way to handle a specific task, why should Buck forget it by tomorrow?
-
-### How It Works
-
-1. **Subagent completes task** (3+ tool calls)
-2. **Skill Extractor** analyzes the transcript
-3. **DRAFT skill** created in `skills/auto-draft/`
-4. **After 3 successful re-invocations:** promoted to `skills/auto/`
-5. **User always controls** — browse, edit, or delete anytime
-
-### Safety Guardrails
-
-- 24-hour review window for subagent-created skills
-- DRAFT mode prevents clutter until proven useful
-- Auto-archive after 7 days unused
-- User curates the final skill library
-
-### Why the Council?
-
-Three LLMs negotiated this implementation:
-- **Mnemosyne** (kimi-k2.5): Architecture and safety guardrails
-- **Sibyl** (minimax-m2.7): UX and automation principles
-- **Fabricator** (gemma4:31b): Implementation feasibility
-
-See full details: [HERMES_ADAPTATION.md](./HERMES_ADAPTATION.md)
+**Technical spec:** [ARCHITECTURE.md](./ARCHITECTURE.md)
 
 ---
 
