@@ -61,6 +61,14 @@ class MemoryIndex:
 
     def index_entry(self, entry: dict[str, Any]) -> None:
         """Insert or replace an entry in the index."""
+        # Normalize legacy field names
+        text = entry.get("text", entry.get("content", ""))
+        entry_type = entry.get("type", "memory")
+        created_at = entry.get("created_at", entry.get("timestamp", ""))
+        tags = entry.get("tags", [])
+        refs = entry.get("refs", [])
+        vectors = entry.get("vectors", [])
+
         with self._conn() as conn:
             conn.execute(
                 """
@@ -69,17 +77,17 @@ class MemoryIndex:
                 """,
                 (
                     entry["id"],
-                    entry["type"],
-                    json.dumps(entry.get("tags", [])),
-                    entry["text"],
-                    json.dumps(entry.get("refs", [])),
-                    json.dumps(entry.get("vectors", [])),
-                    entry["created_at"],
+                    entry_type,
+                    json.dumps(tags),
+                    text,
+                    json.dumps(refs),
+                    json.dumps(vectors),
+                    created_at,
                 ),
             )
             conn.execute(
                 "INSERT OR IGNORE INTO entries_fts (id, type, text, tags) VALUES (?, ?, ?, ?)",
-                (entry["id"], entry["type"], entry["text"], json.dumps(entry.get("tags", []))),
+                (entry["id"], entry_type, text, json.dumps(tags)),
             )
             for tag in entry.get("tags", []):
                 conn.execute("INSERT OR IGNORE INTO tags (name) VALUES (?)", (tag,))
